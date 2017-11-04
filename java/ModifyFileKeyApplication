@@ -1,0 +1,205 @@
+package com.gaz;
+
+import java.io.*;
+
+/**
+ * Hello world!
+ * @author gaz
+ * @date 2017-11-04
+ */
+public class ModifyFileKeyApplication {
+
+	/** 目录数 */
+	private static int DIRECTORY_NUM = 0;
+	/** 文件数 */
+	private static int FILE_NUM = 0;
+
+	/** 替换的关键字 */
+	private static String REPLACEMENT_KEY = "mdxd";
+
+	/** 被过滤的关键字 */
+	private static String[] FILTER_KEY = {"zheng", "Zheng", "shuzheng", "shuzheng",
+			"ShuZheng", "zhangshuzheng", "ZhangShuzheng", "ZhangShuZheng",
+			"zhangShuZheng"};
+
+	/** 过滤文件 */
+	private static String[] FILTER_FILE_SUFFIX = {"exe", "png", "jpeg", "jpg", "pdb", "pdm", "apm", "xmind", "vsdx", "gitignore", "jar", "war", "lnk"};
+
+	/** 过滤的文件夹 */
+	private static String FILTER_DIRECTORY = "target";
+
+	/** 所要查看的文件 */
+	private static String FILE_INFO = "mdxd-upms/pom.xml";
+
+	public static void main(String[] args) throws Exception {
+		String basePath = "E:/java_idea/mdxd";
+		renameFile(basePath, 0);
+		// File file = new File("E:/java_idea/ReNameSampleMaven.zip");
+		// file.renameTo(new File("E:/java_idea/ReNameSampleMaven.zip")); // 改名
+		// System.out.println(file.getName()); // SampleMaven.zip
+		// [E:, java_idea, ReNameSampleMaven.zip]
+		// String[] s = "E:/java_idea/ReNameSampleMaven.zip".split("/");
+		// System.out.println(Arrays.toString(s));
+		// System.out.println(file.getAbsolutePath()); // E:\java_idea\ReNameSampleMaven.zip
+		// rewriteContent("E:/java_idea/a.txt");
+		// R 源文件[E:\java_idea\mdxd\.idea\artifacts\zheng_cms_admin_war.xml] 更名成功，新文件[E:\java_idea\mdxd\.idea\artifacts\zheng_cms_admin_war.xml
+		// String s = "E:\\java_idea\\mdxd\\.idea\\artifacts\\ZhengUpmsRpcServiceApplication.xml";
+		// System.out.println(renameContent(s));
+	}
+
+	/**
+	 * 重写文件名
+	 * @param path
+	 */
+	public static void renameFile(String path, int level) throws Exception {
+		// 文件夹过滤
+		if (path.contains(FILTER_DIRECTORY)) {
+			return ;
+		}
+
+		// 打印结构
+		/*++level;
+		String s = "";
+		for (int i = 0; i < level; i++)
+			s += " ";
+		System.out.println(s + path);*/
+		File file = new File(path);
+
+		// 1. 更改名称
+		// String fileName = file.getAbsolutePath();
+		String newStr = renameContent(path);
+		if (null != newStr) {
+			file.renameTo(new File(newStr));
+			System.out.println("R 源文件[" + path + "] 更名成功，新文件[" + newStr);
+		}
+
+		// 判断是否是目录
+		if (file.isDirectory()) { // 递归
+			File[] files = file.listFiles();
+			for (File childFile : files) {
+				// System.out.println("    D " + (++DIRECTORY_NUM) + " TOTAL " + childFile.length());
+				renameFile(childFile.getAbsolutePath(), level);
+			}
+		} else { // 如果是文件，则更改文件内容
+			String absolutePath = file.getAbsolutePath();
+			String[] suffix = absolutePath.split("\\.");
+
+			// 文件过滤
+			if (suffix.length > 1) {
+				for (String str : FILTER_FILE_SUFFIX) {
+					if (suffix[suffix.length - 1].equals(str)) {
+						System.out.println("  P 文件过滤 [" + absolutePath);
+						return ;
+					}
+				}
+			}
+
+			// System.out.println("    F " + (++FILE_NUM));
+			rewriteContent(absolutePath);
+		}
+	}
+
+	/**
+	 *
+	 * @param fileName 文件名
+	 * @return
+	 */
+	private static String renameContent(String fileName) {
+		// 优化更改文件名 - 如果不包含就不更改
+		boolean isInclude = false;
+		for (String filter_key : FILTER_KEY) {
+			if (fileName.contains(filter_key)) {
+				isInclude = true;
+				break;
+			}
+		}
+
+		if (!isInclude) {
+			return null;
+		}
+
+		String newStr = fileName;
+		for (String filter_key : FILTER_KEY) {
+			newStr = newStr.replaceAll(filter_key, REPLACEMENT_KEY);
+		}
+
+		// 验证是否成功
+		/*isInclude = false;
+		for (String filter_key : FILTER_KEY) {
+			if (fileName.contains(filter_key)) {
+				isInclude = true;
+				break;
+			}
+		}
+		if (isInclude) {
+			// 失败
+			System.out.println("    F oldStr [" + fileName + "] - newStr [" + newStr);
+		} else {
+			// 成功
+			System.out.println("    T oldStr [" + fileName + "] - newStr [" + newStr);
+		}*/
+
+		return newStr;
+	}
+
+	/**
+	 *
+	 * @param path 绝对路径 E:/xx/xx.xx
+	 * @throws Exception
+	 */
+	private static void rewriteContent(String path) throws Exception {
+
+		boolean isInclude = false;
+		for (String filter_key : FILTER_KEY) {
+			if (path.contains(filter_key)) {
+				isInclude = true;
+				break;
+			}
+		}
+		if (isInclude) {
+			path = renameContent(path);
+		}
+
+		File oldFile, newFile ;
+		BufferedReader input ;
+		BufferedWriter output ;
+		try {
+			oldFile = new File(path);
+			input = new BufferedReader(new InputStreamReader(new FileInputStream(oldFile)));
+			// 新文件
+			String[] paths = oldFile.getName().split("\\.");
+			String newFileName = "temp" + System.currentTimeMillis();
+			newFile = null;
+			if (paths.length == 1) {
+				newFile = new File(path.replace(oldFile.getName(), newFileName));
+			} else if (paths.length > 1) {
+				newFile = new File(path.replace(oldFile.getName(), newFileName + paths[paths.length - 1]));
+			}
+			output = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(newFile)));
+		} catch (FileNotFoundException e) {
+			System.out.println("    ERROR FileNotFoundException [" + path);
+			return ;
+		}
+
+		String str ;
+		String temp ;
+		while ((str = input.readLine()) != null) {
+			temp = renameContent(str);
+			// 查看特定文件信息
+			if (path.contains(FILE_INFO))
+				System.out.println(str);
+			if (null == temp)
+				temp = str;
+			output.write(temp + "\r\n");
+		}
+
+		input.close();
+		output.close();
+
+		// 删除老文件，更改新文件名
+		oldFile.delete();
+		newFile.renameTo(new File(path));
+
+		System.out.println("U 文件:[" + path + "]内容修改完毕");
+	}
+}
